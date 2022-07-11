@@ -5,22 +5,22 @@ import numpy as np
 CUDA_VISIBLE_DEVICES = '0'  # The current version only supports one GPU training
 
 
-set = 'iNat_3spec'  # Different dataset with different
+set = 'wildbees'  # Different dataset with different
 model_name = 'resnet50'
 
-batch_size = 4
+batch_size = 64
 vis_num = batch_size * 5 # The number of visualized images in tensorboard
 eval_trainset = True  # Whether or not evaluate trainset
 save_interval = 1
 max_checkpoint_num = 5 #200
-end_epoch = 10 #200
+end_epoch = 5 #200
 init_lr = 0.001
-lr_milestones = [3, 5] #[60, 100]
+lr_milestones = [2, 4] #[60, 100]
 lr_decay_rate = 0.1
 weight_decay = 1e-4
 stride = 32
 channels = 2048 # num. of neurons in the Dense layer (fixed for ResNet50)
-input_size = 448
+input_size = 224#448
 
 # The pth path of pretrained model
 pretrain_path = './models/pretrained/resnet50-19c8e357.pth'
@@ -66,6 +66,12 @@ else:
         model_path = './checkpoint/inat_3spec'      # pth save path
         root = './datasets/iNat_3spec'  # dataset path
         num_classes = 3
+    elif set == 'wildbees':
+        N_list = [3, 2, 1]
+        window_side = [64, 128, 192]
+        model_path = './checkpoint/wildbees'      # pth save path
+        root = '../..'  # dataset path
+        num_classes = 22
 
 
 proposalN = sum(N_list)  # proposal window num

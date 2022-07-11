@@ -294,3 +294,98 @@ class iNat():
             return len(self.train_label)
         else:
             return len(self.test_label)
+
+
+class Wildbees():
+    def __init__(self, input_size, root, is_train=True, data_len=None):
+        self.input_size = input_size
+        self.root = root
+        self.is_train = is_train
+
+        train_path = os.path.join(self.root, 'data/data_lstudio/Bees')
+        test_path = os.path.join(self.root, 'data/data_lstudio/Bees_Christian')
+
+        train_indexes_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees/images.txt'))
+        test_indexes_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees_Christian/images.txt'))
+        train_label_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees/22_species/image_class_labels.txt'))
+        test_label_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees_Christian/22_species/image_class_labels.txt'))
+        train_box_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees/bounding_boxes.txt'))
+        test_box_file = open(os.path.join(self.root, 'teo/beexplainable/metafiles/Bees_Christian/bounding_boxes.txt'))
+
+        train_ind_list, test_ind_list = [], []
+        for line in train_indexes_file:
+            train_ind_list.append(line[:-1].split(' ')[-1])
+        for line in test_indexes_file:
+            test_ind_list.append(line[:-1].split(' ')[-1])
+
+        train_label_list, test_label_list = [], []
+        for line in train_label_file:
+            train_label_list.append(int(line[:-1].split(' ')[-1]) - 1)
+        for line in test_label_file:
+            test_label_list.append(int(line[:-1].split(' ')[-1]) - 1)
+
+        train_box_list, test_box_list = [], []
+        for line in train_box_file:
+            data = line[:-1].split(' ')
+            train_box_list.append([int(float(data[2])), int(float(data[1])),
+                                   int(float(data[4])), int(float(data[3]))])
+        for line in test_box_file:
+            data = line[:-1].split(' ')
+            test_box_list.append([int(float(data[2])), int(float(data[1])),
+                                  int(float(data[4])), int(float(data[3]))])
+        self.train_box = torch.tensor(train_box_list)
+        self.test_box = torch.tensor(test_box_list)
+
+        if self.is_train:
+            self.train_img = [os.path.join(train_path, train_file) for train_file in
+                              train_ind_list[:data_len]]
+            self.train_label = train_label_list[:data_len]
+
+        else:
+            self.test_img = [os.path.join(test_path, test_file) for test_file in
+                             test_ind_list[:data_len]]
+            self.test_label = test_label_list[:data_len]
+
+    def __getitem__(self, index):
+        if self.is_train:
+            img, target, box = imageio.imread(self.train_img[index]), self.train_label[index], self.train_box[index]
+            if len(img.shape) == 2:
+                img = np.stack([img] * 3, 2)
+            img = Image.fromarray(img, mode='RGB')
+
+            # compute scaling
+            height, width = img.height, img.width
+            height_scale = self.input_size / height
+            width_scale = self.input_size / width
+
+            img = transforms.Resize((self.input_size, self.input_size), Image.BILINEAR)(img)
+            img = transforms.RandomHorizontalFlip()(img)
+            img = transforms.ColorJitter(brightness=0.2, contrast=0.2)(img)
+
+            img = transforms.ToTensor()(img)
+            img = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(img)
+
+        else:
+            img, target, box = imageio.imread(self.test_img[index]), self.test_label[index], self.test_box[index]
+            if len(img.shape) == 2:
+                img = np.stack([img] * 3, 2)
+            img = Image.fromarray(img, mode='RGB')
+
+            # compute scaling
+            height, width = img.height, img.width
+            height_scale = self.input_size / height
+            width_scale = self.input_size / width
+
+            img = transforms.Resize((self.input_size, self.input_size), Image.BILINEAR)(img)
+            img = transforms.ToTensor()(img)
+            img = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(img)
+
+        scale = torch.tensor([height_scale, width_scale])
+
+        return img, target, box, scale
+
+    def __len__(self):
+        if self.is_train:
+            return len(self.train_label)
+        else:
+            return len(self.test_label)
